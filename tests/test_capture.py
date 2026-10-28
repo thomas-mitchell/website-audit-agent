@@ -41,7 +41,7 @@ def test_capture_page(tmp_path, monkeypatch):
     )
 
     assert page_data["title"] == "Test Website"
-    assert "Welcome" in page_data["headings"]
+    assert {"level": 1, "text": "Welcome"} in page_data["headings"]
     assert "This is a test page" in page_data["text"]
 
     assert Path(
