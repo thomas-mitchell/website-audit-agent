@@ -13,6 +13,8 @@ def main():
         "prepared_evidence": "",
         "analysis_files": {},
         "findings": [],
+        "investigations": [],
+        "investigation_results": [],
         "report": ""
     })
 

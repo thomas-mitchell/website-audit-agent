@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from auditor.models.findings import AnalysisResult
+from auditor.models.investigation import ReviewResult
 from auditor.state import AuditState
 
 
@@ -103,6 +103,37 @@ VERIFICATION:
   names, visual inspection or runtime behaviour must be checked.
 - When only part of a finding is confirmed, separate the confirmed
   observation from the unverified consequence.
+
+  
+INVESTIGATION REQUESTS:
+
+You can request additional browser investigation when the supplied
+evidence is insufficient to establish an important conclusion.
+
+Examples:
+- A fragment link exists, but its scrolling behaviour is unknown.
+- An image may be informational, but its purpose is unclear.
+- Duplicate DOM content may or may not be exposed to screen readers.
+- An interactive element may fail when clicked.
+- An element's visibility or accessible name needs verification.
+
+For each investigation request:
+- Identify the corresponding finding by its exact title.
+- Select the appropriate investigation type.
+- State one specific, answerable question.
+- Provide a target selector, URL, fragment, or element description.
+
+Only request investigations that could materially change a finding's
+status, severity, or recommendation.
+
+Do not request investigations for issues already conclusively
+demonstrated by axe-core or Lighthouse.
+
+Do not request investigations simply to reproduce a confirmed issue.
+
+Mark findings requiring investigation as NEEDS_REVIEW.
+
+Limit investigation requests to the 5 most important unresolved questions.
 """
 
 
@@ -116,7 +147,7 @@ def review_findings(state: AuditState) -> dict:
     )
 
     reviewer = model.with_structured_output(
-        AnalysisResult,
+        ReviewResult,
         method="json_schema"
     )
 
@@ -149,5 +180,6 @@ def review_findings(state: AuditState) -> dict:
     )
 
     return {
-        "findings": response.findings
+        "findings": response.findings,
+        "investigations": response.investigations
     }

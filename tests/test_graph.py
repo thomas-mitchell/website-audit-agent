@@ -117,7 +117,8 @@ def test_audit_graph(tmp_path, monkeypatch):
 
     def mock_review(state):
         return {
-            "findings": state["findings"]
+            "findings": state["findings"],
+            "investigations": []
         }
 
     # Build graph with mocked external tools and LLMs
@@ -138,6 +139,8 @@ def test_audit_graph(tmp_path, monkeypatch):
         "prepared_evidence": "",
         "analysis_files": {},
         "findings": [],
+        "investigations": [],
+        "investigation_results": [],
         "report": ""
     })
 
