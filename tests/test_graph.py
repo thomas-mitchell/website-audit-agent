@@ -115,13 +115,19 @@ def test_audit_graph(tmp_path, monkeypatch):
 
         return analyse
 
+    def mock_review(state):
+        return {
+            "findings": state["findings"]
+        }
+
     # Build graph with mocked external tools and LLMs
     graph = build_graph(
         lighthouse_node=mock_lighthouse,
         axe_node=mock_axe,
         accessibility_node=mock_analyst("accessibility"),
         seo_node=mock_analyst("seo"),
-        ux_node=mock_analyst("ux")
+        ux_node=mock_analyst("ux"),
+        review_node=mock_review
     )
 
     # Execute the complete graph

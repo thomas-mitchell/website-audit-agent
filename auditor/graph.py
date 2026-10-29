@@ -13,9 +13,9 @@ from auditor.nodes.accessibility_analysis import (
 )
 from auditor.nodes.seo_analysis import analyse_seo
 from auditor.nodes.ux_analysis import analyse_ux
-
 from auditor.nodes.analysis import analyse_page
 from auditor.nodes.report import generate_report
+from auditor.nodes.review import review_findings
 
 
 def build_graph(
@@ -24,6 +24,7 @@ def build_graph(
     accessibility_node=analyse_accessibility,
     seo_node=analyse_seo,
     ux_node=analyse_ux,
+    review_node=None
 ):
     builder = StateGraph(AuditState)
 
@@ -42,6 +43,7 @@ def build_graph(
 
     builder.add_node("analyse", analyse_page)
     builder.add_node("report", generate_report)
+    builder.add_node("review", review_node or review_findings)
 
     # Capture
     builder.add_edge(START, "capture")
@@ -81,7 +83,8 @@ def build_graph(
     )
 
     # Aggregate and report
-    builder.add_edge("analyse", "report")
+    builder.add_edge("analyse", "review")
+    builder.add_edge("review", "report")
     builder.add_edge("report", END)
 
     return builder.compile()
