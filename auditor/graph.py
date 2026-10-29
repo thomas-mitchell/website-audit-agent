@@ -13,8 +13,6 @@ from auditor.nodes.accessibility_analysis import (
 )
 from auditor.nodes.seo_analysis import analyse_seo
 from auditor.nodes.ux_analysis import analyse_ux
-from auditor.nodes.analysis import analyse_page
-from auditor.nodes.report import generate_report
 from auditor.nodes.review import review_findings
 
 
