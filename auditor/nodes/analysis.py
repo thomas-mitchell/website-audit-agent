@@ -1,62 +1,44 @@
-import json
-from pathlib import Path
-
+from auditor.models.findings import AnalysisResult
 from auditor.state import AuditState
 
 
-def load_json(path: str) -> dict:
-    return json.loads(
-        Path(path).read_text(encoding="utf-8")
-    )
-
-
 def analyse_page(state: AuditState) -> dict:
-    print("Analysing audit evidence...")
-
-    evidence = state["evidence_files"]
-
-    page_data = load_json(evidence["page"])
-    lighthouse_data = load_json(evidence["lighthouse"])
-    axe_data = load_json(evidence["axe"])
+    print("Aggregating AI findings...")
 
     findings = []
 
-    # Existing basic checks
-    if not page_data["title"]:
-        findings.append("Page has no title.")
+    for category in (
+        "accessibility",
+        "seo",
+        "ux"
+    ):
+        path = state["analysis_files"][category]
 
-    if not page_data["headings"]:
-        findings.append("Page has no headings.")
-
-    if not page_data["text"].strip():
-        findings.append("Page contains no visible text.")
-
-    # Lighthouse scores
-    categories = lighthouse_data.get("categories", {})
-
-    for category, data in categories.items():
-        score = data.get("score")
-
-        if score is not None:
-            findings.append(
-                f"Lighthouse {category}: {score * 100:.0f}/100"
-            )
-
-    # axe-core violations
-    violations = axe_data.get("violations", [])
-
-    findings.append(
-        f"axe-core: {len(violations)} accessibility "
-        f"rule violations detected."
-    )
-
-    for violation in violations:
-        findings.append(
-            f"Accessibility [{violation.get('impact')}]: "
-            f"{violation.get('help')} "
-            f"({len(violation.get('nodes', []))} affected elements)"
+        result = AnalysisResult.model_validate_json(
+            open_file(path)
         )
+
+        findings.append(
+            f"{category.upper()}: {result.summary}"
+        )
+
+        for finding in result.findings:
+            findings.append(
+                f"[{finding.severity.value.upper()}] "
+                f"{finding.title}\n"
+                f"  {finding.description}\n"
+                f"  Recommendation: "
+                f"{finding.recommendation}"
+            )
 
     return {
         "findings": findings
     }
+
+
+def open_file(path: str) -> str:
+    from pathlib import Path
+
+    return Path(path).read_text(
+        encoding="utf-8"
+    )

@@ -10,6 +10,9 @@ requires-python = ">=3.12"
 dependencies = [
     "axe-playwright-python>=0.1.8",
     "beautifulsoup4>=4.15.0",
+    "dotenv>=0.9.9",
+    "langchain>=1.4.7",
+    "langchain-anthropic>=1.7.7",
     "langgraph>=1.2.18",
     "playwright>=1.64.1",
 ]

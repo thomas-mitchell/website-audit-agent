@@ -10,6 +10,8 @@ def main():
         "url": "https://example.com",
         "run_id": str(uuid4()),
         "evidence_files": {},
+        "prepared_evidence": "",
+        "analysis_files": {},
         "findings": [],
         "report": ""
     })
@@ -18,9 +20,10 @@ def main():
     print(result["report"])
 
     print()
-    print("Evidence files:")
-    for name, path in result["evidence_files"].items():
-        print(f"  {name}: {path}")
+    print("Analysis files:")
+
+    for category, path in result["analysis_files"].items():
+        print(f"  {category}: {path}")
 
 
 if __name__ == "__main__":

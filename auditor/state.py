@@ -17,6 +17,13 @@ class AuditState(TypedDict):
         merge_dicts
     ]
 
+    prepared_evidence: str
+
+    analysis_files: Annotated[
+        dict[str, str],
+        merge_dicts
+    ]
+
     # Analysis results
     findings: list[str]
 
