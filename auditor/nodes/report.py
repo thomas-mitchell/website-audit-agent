@@ -23,7 +23,8 @@ def generate_report(state: AuditState) -> dict:
 
     if state["findings"]:
         for finding in state["findings"]:
-            lines.append(f"- {finding}")
+            lines.append(finding)
+            lines.append("")
     else:
         lines.append("No issues detected by basic checks.")
 

@@ -50,7 +50,10 @@ def prepare_evidence(state: AuditState) -> dict:
                 "id": audit_id,
                 "title": audit.get("title"),
                 "description": audit.get("description"),
-                "score": score
+                "score": score,
+                "numeric_value": audit.get("numericValue"),
+                "numeric_unit": audit.get("numericUnit"),
+                "display_value": audit.get("displayValue"),
             })
 
     # Extract axe-core violations

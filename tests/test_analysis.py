@@ -1,3 +1,4 @@
+import json
 from auditor.nodes.analysis import analyse_page
 
 
@@ -8,21 +9,26 @@ def test_analyse_page(tmp_path):
         path = tmp_path / f"{category}.json"
 
         path.write_text(
-            f"""
-            {{
-                "category": "{category}",
+            json.dumps({
+                "category": category,
                 "summary": "Test summary",
                 "findings": [
-                    {{
-                        "title": "Test issue",
+                    {
+                        "title": f"Test {category} issue",
                         "severity": "medium",
-                        "description": "Test description",
-                        "recommendation": "Test recommendation",
-                        "evidence": ["Test evidence"]
-                    }}
+                        "status": "confirmed",
+                        "description": "A test issue was detected.",
+                        "impact": "Users may experience difficulties.",
+                        "recommendation": "Fix the test issue.",
+                        "evidence": ["Test evidence"],
+                        "reproduction_steps": [
+                            "Open the test page.",
+                            "Inspect the affected element."
+                        ],
+                        "references": ["WCAG 2.1.1"]
+                    }
                 ]
-            }}
-            """,
+            }),
             encoding="utf-8"
         )
 
@@ -34,6 +40,16 @@ def test_analyse_page(tmp_path):
 
     assert len(result["findings"]) == 6
     assert any(
-        "Test recommendation" in finding
+        "Fix the test issue." in finding
+        for finding in result["findings"]
+    )
+
+    assert any(
+        "Users may experience difficulties." in finding
+        for finding in result["findings"]
+    )
+
+    assert any(
+        "WCAG 2.1.1" in finding
         for finding in result["findings"]
     )

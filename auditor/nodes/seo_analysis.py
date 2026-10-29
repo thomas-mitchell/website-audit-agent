@@ -14,7 +14,9 @@ Focus on:
 - Content clarity and organization.
 - Readability and usefulness.
 - Internal linking and navigation labels.
-- Canonical and robots metadata.
+- Canonical and robots directives, but only flag issues where
+  the evidence demonstrates an actual indexing or duplication risk.
+  Missing directives are not automatically problems.
 - Relevant Lighthouse SEO findings.
 
 Rules:

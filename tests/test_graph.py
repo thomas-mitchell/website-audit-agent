@@ -90,9 +90,16 @@ def test_audit_graph(tmp_path, monkeypatch):
                         {
                             "title": f"Test {category} issue",
                             "severity": "medium",
+                            "status": "confirmed",
                             "description": "A test issue was detected.",
+                            "impact": "Users may experience difficulties.",
                             "recommendation": "Fix the test issue.",
-                            "evidence": ["Test evidence"]
+                            "evidence": ["Test evidence"],
+                            "reproduction_steps": [
+                                "Open the test page.",
+                                "Inspect the affected element."
+                            ],
+                            "references": ["WCAG 2.1.1"]
                         }
                     ]
                 }),

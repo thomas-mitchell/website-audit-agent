@@ -7,7 +7,7 @@ def main():
     graph = build_graph()
 
     result = graph.invoke({
-        "url": "https://example.com",
+        "url": "https://www.boomworks.com.au/",
         "run_id": str(uuid4()),
         "evidence_files": {},
         "prepared_evidence": "",

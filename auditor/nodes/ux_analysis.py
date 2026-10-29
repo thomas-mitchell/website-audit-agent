@@ -26,6 +26,14 @@ Rules:
 - Provide specific, actionable recommendations.
 - Avoid duplicate findings.
 - Return only issues supported by evidence.
+
+LIGHTHOUSE METRICS:
+- Lighthouse audit scores are normalised values between 0 and 1.
+- Never interpret an audit score as a duration or measurement.
+- Use display_value for human-readable measurements where available.
+- Use numeric_value and numeric_unit when precise measurements are needed.
+- Do not invent timing values when actual measurements are unavailable.
+- Distinguish observed performance measurements from potential user impact.
 """
 
 
