@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from auditor.graph import build_graph
+from auditor.models.findings import Finding
 
 
 def test_audit_graph(tmp_path, monkeypatch):
@@ -171,12 +172,14 @@ def test_audit_graph(tmp_path, monkeypatch):
         assert Path(path).exists()
 
     # Verify aggregation
-    assert len(result["findings"]) == 6
+    assert len(result["findings"]) == 3
+    assert all(isinstance(f, Finding) for f in result["findings"])
 
-    assert any(
-        "Fix the test issue." in finding
-        for finding in result["findings"]
-    )
+    assert {f.title for f in result["findings"]} == {
+        "Test accessibility issue",
+        "Test seo issue",
+        "Test ux issue",
+    }
 
     # Verify final report
     assert "Example University" in result["report"]

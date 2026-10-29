@@ -1,5 +1,7 @@
 from typing import Annotated, TypedDict
 
+from auditor.models.findings import Finding
+
 
 def merge_dicts(
     existing: dict[str, str],
@@ -25,7 +27,7 @@ class AuditState(TypedDict):
     ]
 
     # Analysis results
-    findings: list[str]
+    findings: list[Finding]
 
     # Final report
     report: str

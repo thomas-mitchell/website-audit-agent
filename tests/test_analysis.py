@@ -1,5 +1,7 @@
 import json
+
 from auditor.nodes.analysis import analyse_page
+from auditor.models.findings import Finding, Severity, VerificationStatus
 
 
 def test_analyse_page(tmp_path):
@@ -34,22 +36,36 @@ def test_analyse_page(tmp_path):
 
         analysis_files[category] = str(path)
 
-    result = analyse_page({
+    state = {
         "analysis_files": analysis_files
-    })
+    }
 
-    assert len(result["findings"]) == 6
-    assert any(
-        "Fix the test issue." in finding
-        for finding in result["findings"]
-    )
+    result = analyse_page(state)
 
-    assert any(
-        "Users may experience difficulties." in finding
-        for finding in result["findings"]
-    )
+    # One finding from each of the three analysis files
+    assert len(result["findings"]) == 3
 
-    assert any(
-        "WCAG 2.1.1" in finding
-        for finding in result["findings"]
-    )
+    # Findings should remain structured Pydantic objects
+    assert all(isinstance(f, Finding) for f in result["findings"])
+
+    # Verify all three categories were aggregated
+    titles = {f.title for f in result["findings"]}
+
+    assert titles == {
+        "Test accessibility issue",
+        "Test seo issue",
+        "Test ux issue"
+    }
+
+    # Verify the fields were preserved correctly
+    for finding in result["findings"]:
+        assert finding.severity == Severity.MEDIUM
+        assert finding.status == VerificationStatus.CONFIRMED
+        assert finding.description == "A test issue was detected."
+        assert finding.recommendation == "Fix the test issue."
+        assert finding.evidence == ["Test evidence"]
+        assert finding.reproduction_steps == [
+            "Open the test page.",
+            "Inspect the affected element."
+        ]
+        assert finding.references == ["WCAG 2.1.1"]

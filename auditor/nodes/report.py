@@ -23,8 +23,15 @@ def generate_report(state: AuditState) -> dict:
 
     if state["findings"]:
         for finding in state["findings"]:
-            lines.append(finding)
-            lines.append("")
+            lines.extend([
+                "",
+                finding.title,
+                f"Severity: {finding.severity.value.upper()}",
+                f"Status: {finding.status.value.upper()}",
+                f"Description: {finding.description}",
+                f"Impact: {finding.impact}",
+                f"Recommendation: {finding.recommendation}",
+            ])
     else:
         lines.append("No issues detected by basic checks.")
 
