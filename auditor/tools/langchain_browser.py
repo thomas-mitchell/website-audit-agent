@@ -6,7 +6,7 @@ from auditor.tools.session import BrowserSession
 def create_browser_tools(session: BrowserSession):
 
     @tool
-    def inspect_element(selector: str) -> dict:
+    async def inspect_element(selector: str) -> dict:
         """Inspect DOM elements matching a CSS selector.
 
         Returns matching elements, HTML, text, visibility,
@@ -15,6 +15,6 @@ def create_browser_tools(session: BrowserSession):
         Use this to investigate element visibility, attributes,
         duplicate elements and page structure.
         """
-        return session.inspect_element(selector)
+        return await session.inspect_element(selector)
 
     return [inspect_element]

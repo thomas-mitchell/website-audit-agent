@@ -1,4 +1,4 @@
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 
 from auditor.tools.browser import inspect_element
 
@@ -10,38 +10,38 @@ class BrowserSession:
         self.browser = None
         self.page = None
 
-    def __enter__(self):
-        self.playwright = sync_playwright().start()
+    async def __aenter__(self):
+        self.playwright = await async_playwright().start()
 
         try:
-            self.browser = self.playwright.chromium.launch(
+            self.browser = await self.playwright.chromium.launch(
                 headless=True
             )
 
-            self.page = self.browser.new_page(
+            self.page = await self.browser.new_page(
                 viewport={"width": 1440, "height": 900}
             )
 
-            self.page.goto(
+            await self.page.goto(
                 self.url,
                 wait_until="domcontentloaded",
                 timeout=30000
             )
 
-            self.page.wait_for_timeout(1000)
+            await self.page.wait_for_timeout(1000)
 
             return self
 
         except Exception:
-            self.__exit__(None, None, None)
+            await self.__aexit__(None, None, None)
             raise
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self, exc_type, exc_value, traceback):
         if self.browser:
-            self.browser.close()
+            await self.browser.close()
 
         if self.playwright:
-            self.playwright.stop()
+            await self.playwright.stop()
 
-    def inspect_element(self, selector: str) -> dict:
-        return inspect_element(self.page, selector)
+    async def inspect_element(self, selector: str) -> dict:
+        return await inspect_element(self.page, selector)

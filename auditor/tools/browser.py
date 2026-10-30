@@ -1,18 +1,18 @@
-from playwright.sync_api import Page
+from playwright.async_api import Page
 
 
-def inspect_element(page: Page, selector: str) -> dict:
+async def inspect_element(page: Page, selector: str) -> dict:
     """Inspect matching DOM elements and their rendered properties."""
 
     locator = page.locator(selector)
-    count = locator.count()
+    count = await locator.count()
 
     elements = []
 
     for index in range(min(count, 10)):
         element = locator.nth(index)
 
-        details = element.evaluate("""
+        details = await element.evaluate("""
             el => {
                 const style = getComputedStyle(el);
                 const rect = el.getBoundingClientRect();
@@ -38,7 +38,7 @@ def inspect_element(page: Page, selector: str) -> dict:
             }
         """)
 
-        details["visible"] = element.is_visible()
+        details["visible"] = await element.is_visible()
         elements.append(details)
 
     return {
