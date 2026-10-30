@@ -49,6 +49,19 @@ ACCESSIBILITY VERIFICATION:
   appropriate testing.
 - If the investigation requires accessibility-tree inspection and
   no suitable tool is available, set resolved to false.
+
+INVESTIGATION CONCLUSIONS:
+- A successful investigation does not necessarily confirm a defect.
+- An investigation may resolve a question by disproving its premise.
+- When a reported element or link is absent, report that observation
+  without assuming the corresponding feature is broken.
+- Do not infer JavaScript behaviour solely from DOM inspection.
+- Do not infer the purpose of hidden or animated elements without
+  supporting evidence.
+- Use resolved=true when sufficient evidence answers the specific
+  question, even if the original finding is unsupported.
+- Clearly distinguish "not found in the inspected page state"
+  from "does not exist anywhere on the website".
 """
 
 

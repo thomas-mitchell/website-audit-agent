@@ -33,5 +33,36 @@ def create_browser_tools(session: BrowserSession):
         """
         return await session.inspect_accessibility(selector)
 
+    @tool
+    async def inspect_scroll_position() -> dict:
+        """Inspect the browser's current scroll position.
+
+        Returns the current URL, fragment identifier, scroll coordinates,
+        viewport dimensions and document dimensions.
+
+        Use this to investigate anchor navigation and scrolling behaviour.
+        """
+        return await session.inspect_scroll_position()
+
+
+    @tool
+    async def click_element(selector: str) -> dict:
+        """Click a single element matching a CSS selector.
+
+        Returns browser state before and after the click, including URL
+        changes, fragment changes and scrolling changes.
+
+        Use this to investigate navigation links and interactive elements.
+
+        Only click safe, non-destructive controls. Do not submit forms,
+        make purchases, delete data or perform other consequential actions.
+        """
+        return await session.click_element(selector)
+
     
-    return [inspect_element, inspect_accessibility]
+    return [
+        inspect_element,
+        inspect_accessibility,
+        inspect_scroll_position,
+        click_element,
+    ]

@@ -64,7 +64,7 @@ def test_browser_session_and_langchain_tool(tmp_path):
         async with BrowserSession(test_file.as_uri()) as session:
             tools = create_browser_tools(session)
 
-            assert len(tools) == 2
+            assert len(tools) == 4
             assert tools[0].name == "inspect_element"
             assert tools[1].name == "inspect_accessibility"
 
@@ -124,5 +124,60 @@ def test_inspect_accessibility(tmp_path):
             assert "main:" in snapshot
             assert 'contentinfo "Contact information"' in snapshot
             assert 'link "Contact Us"' in snapshot
+
+    asyncio.run(run_test())
+
+def test_browser_interaction_tools(tmp_path):
+    async def run_test():
+        html = """
+        <html>
+            <body style="margin: 0">
+                <a id="jump-link" href="#destination">
+                    Jump to destination
+                </a>
+
+                <div style="height: 1500px"></div>
+
+                <section id="destination">
+                    <h2>Destination</h2>
+                </section>
+
+                <div style="height: 1000px"></div>
+            </body>
+        </html>
+        """
+
+        test_file = tmp_path / "test.html"
+        test_file.write_text(html, encoding="utf-8")
+
+        async with BrowserSession(test_file.as_uri()) as session:
+            tools = {
+                tool.name: tool
+                for tool in create_browser_tools(session)
+            }
+
+            before = await tools[
+                "inspect_scroll_position"
+            ].ainvoke({})
+
+            assert before["scroll_y"] == 0
+            assert before["hash"] == ""
+
+            result = await tools[
+                "click_element"
+            ].ainvoke({
+                "selector": "#jump-link"
+            })
+
+            assert result["success"] is True
+            assert result["hash_changed"] is True
+            assert result["scroll_changed"] is True
+
+            after = await tools[
+                "inspect_scroll_position"
+            ].ainvoke({})
+
+            assert after["hash"] == "#destination"
+            assert after["scroll_y"] > 0
 
     asyncio.run(run_test())

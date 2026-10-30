@@ -8,13 +8,15 @@ from auditor.models.investigation import (
 
 
 request = InvestigationRequest(
-    finding_title="Duplicate footer landmarks",
-    investigation_type=InvestigationType.ACCESSIBILITY,
+    finding_title="Potential broken anchor navigation",
+    investigation_type=InvestigationType.ANCHOR,
     question=(
-        "How many footer elements exist on the page, "
-        "and are any hidden using CSS or aria-hidden?"
+        "Does clicking the link targeting #talent-fake navigate "
+        "to the intended section of the page? "
+        "Check whether the URL fragment changes, whether the page "
+        "scrolls, and whether the destination element exists."
     ),
-    target="footer",
+    target="#talent-fake",
 )
 
 result = asyncio.run(
