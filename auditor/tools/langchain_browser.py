@@ -17,4 +17,21 @@ def create_browser_tools(session: BrowserSession):
         """
         return await session.inspect_element(selector)
 
-    return [inspect_element]
+    @tool
+    async def inspect_accessibility(
+        selector: str = "body",
+    ) -> dict:
+        """Inspect the browser's accessible structure.
+
+        Returns accessibility snapshots containing semantic roles,
+        accessible names and descendant elements.
+
+        Use selector='body' to investigate page landmarks such as
+        main, navigation, banner and contentinfo.
+
+        This does not constitute real screen-reader testing.
+        """
+        return await session.inspect_accessibility(selector)
+
+    
+    return [inspect_element, inspect_accessibility]

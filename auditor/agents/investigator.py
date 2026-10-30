@@ -32,6 +32,9 @@ RULES:
   original investigation question.
 - Include concrete observations in the evidence list.
 - Keep your investigation focused on the supplied question.
+- Report observed accessibility roles and names, but do not
+  determine whether they constitute an accessibility violation.
+  That decision belongs to the reviewer.
 
 You are investigating a finding, not deciding its severity
 or whether it should appear in the final report.

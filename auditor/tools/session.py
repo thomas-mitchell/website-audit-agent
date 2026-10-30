@@ -1,6 +1,9 @@
 from playwright.async_api import async_playwright
 
-from auditor.tools.browser import inspect_element
+from auditor.tools.browser import (
+    inspect_element,
+    inspect_accessibility,
+)
 
 
 class BrowserSession:
@@ -45,3 +48,9 @@ class BrowserSession:
 
     async def inspect_element(self, selector: str) -> dict:
         return await inspect_element(self.page, selector)
+
+    async def inspect_accessibility(
+        self,
+        selector: str = "body",
+    ) -> dict:
+        return await inspect_accessibility(self.page, selector)

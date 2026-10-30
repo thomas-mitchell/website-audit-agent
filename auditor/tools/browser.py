@@ -47,3 +47,33 @@ async def inspect_element(page: Page, selector: str) -> dict:
         "elements": elements,
         "truncated": count > 10
     }
+
+
+async def inspect_accessibility(
+    page: Page,
+    selector: str = "body",
+) -> dict:
+    """Inspect the accessible structure of matching elements."""
+
+    locator = page.locator(selector)
+    count = await locator.count()
+
+    elements = []
+
+    for index in range(min(count, 10)):
+        element = locator.nth(index)
+
+        snapshot = await element.aria_snapshot()
+
+        elements.append({
+            "index": index,
+            "snapshot": snapshot[:12000],
+            "truncated": len(snapshot) > 12000,
+        })
+
+    return {
+        "selector": selector,
+        "match_count": count,
+        "elements": elements,
+        "truncated": count > 10,
+    }
