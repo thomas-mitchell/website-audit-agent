@@ -50,6 +50,16 @@ ACCESSIBILITY VERIFICATION:
 - If the investigation requires accessibility-tree inspection and
   no suitable tool is available, set resolved to false.
 
+SELECTOR USAGE:
+- Browser tools accept Playwright selectors, not jQuery selectors.
+- Use :has-text("text") instead of :contains("text").
+- Prefer stable IDs, attributes and semantic selectors.
+- For text searches, use Playwright's :has-text() or text= syntax.
+- If a tool reports an invalid selector, correct it and retry.
+- A failed tool call is not evidence that an element is absent.
+- Do not mark an investigation unresolved solely because a selector
+  failed if alternative selectors can answer the question.
+
 INVESTIGATION CONCLUSIONS:
 - A successful investigation does not necessarily confirm a defect.
 - An investigation may resolve a question by disproving its premise.
@@ -62,6 +72,32 @@ INVESTIGATION CONCLUSIONS:
   question, even if the original finding is unsupported.
 - Clearly distinguish "not found in the inspected page state"
   from "does not exist anywhere on the website".
+
+EVIDENCE AND CERTAINTY:
+- Distinguish three levels of evidence:
+  OBSERVED: Directly established by a browser tool.
+  INFERRED: A reasonable interpretation of observed evidence.
+  UNVERIFIED: A claim requiring testing that has not been performed.
+
+- Clearly identify which conclusions are observations and which
+  are interpretations.
+- Never present an inference as a directly observed fact.
+- Browser accessibility snapshots show accessible roles, names,
+  and structure. They do not prove how a particular screen reader
+  will announce or navigate the content.
+- An image's filename, dimensions, position, surrounding text,
+  or HTML attributes do not establish its visual contents.
+- Do not claim that an image contains a logo, person, product,
+  or other meaningful content without visual evidence.
+- An image with alt="" is generally treated as decorative by
+  assistive technologies. The absence of aria-hidden does not
+  automatically make it an accessibility violation.
+- When visual inspection is required but unavailable, explain
+  what could be established through DOM inspection and what
+  remains unverified.
+- Do not set resolved=true when the investigation question
+  requires evidence that the available tools cannot obtain.
+- Include relevant limitations in the answer field.
 """
 
 

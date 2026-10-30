@@ -1,21 +1,46 @@
 from langchain_core.tools import tool
+from playwright.async_api import Error as PlaywrightError
 
 from auditor.tools.session import BrowserSession
 
+
+def selector_error(selector: str, exc: PlaywrightError) -> dict:
+    """Convert a Playwright selector error into actionable feedback."""
+
+    return {
+        "selector": selector,
+        "success": False,
+        "error": str(exc).splitlines()[0],
+        "hint": (
+            "Check the selector syntax and retry. "
+            "Use Playwright-supported selectors. "
+            "For text matching, use :has-text(), not :contains(). "
+            'Example: p:has-text("Our Partners"). '
+            "You can also use text=Our Partners."
+        ),
+    }
 
 def create_browser_tools(session: BrowserSession):
 
     @tool
     async def inspect_element(selector: str) -> dict:
-        """Inspect DOM elements matching a CSS selector.
+        """Inspect DOM elements matching a Playwright selector.
 
-        Returns matching elements, HTML, text, visibility,
-        computed styles and bounding boxes.
+        Supports CSS selectors and Playwright text selectors.
 
-        Use this to investigate element visibility, attributes,
-        duplicate elements and page structure.
+        Examples:
+        - footer
+        - #talent-fake
+        - a[href="#talent-fake"]
+        - p:has-text("Our Partners")
+        - text=Years of Experience
+
+        Do not use jQuery :contains() syntax.
         """
-        return await session.inspect_element(selector)
+        try:
+            return await session.inspect_element(selector)
+        except PlaywrightError as exc:
+            return selector_error(selector, exc)
 
     @tool
     async def inspect_accessibility(
@@ -26,12 +51,15 @@ def create_browser_tools(session: BrowserSession):
         Returns accessibility snapshots containing semantic roles,
         accessible names and descendant elements.
 
-        Use selector='body' to investigate page landmarks such as
-        main, navigation, banner and contentinfo.
+        Accepts Playwright selectors, including :has-text().
+        Do not use jQuery :contains() syntax.
 
         This does not constitute real screen-reader testing.
         """
-        return await session.inspect_accessibility(selector)
+        try:
+            return await session.inspect_accessibility(selector)
+        except PlaywrightError as exc:
+            return selector_error(selector, exc)
 
     @tool
     async def inspect_scroll_position() -> dict:
@@ -47,17 +75,19 @@ def create_browser_tools(session: BrowserSession):
 
     @tool
     async def click_element(selector: str) -> dict:
-        """Click a single element matching a CSS selector.
+        """Click a single element matching a Playwright selector.
 
         Returns browser state before and after the click, including URL
         changes, fragment changes and scrolling changes.
 
-        Use this to investigate navigation links and interactive elements.
+        Do not use jQuery :contains() syntax.
 
-        Only click safe, non-destructive controls. Do not submit forms,
-        make purchases, delete data or perform other consequential actions.
+        Only click safe, non-destructive controls.
         """
-        return await session.click_element(selector)
+        try:
+            return await session.click_element(selector)
+        except PlaywrightError as exc:
+            return selector_error(selector, exc)
 
     
     return [

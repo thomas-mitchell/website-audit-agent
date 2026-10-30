@@ -157,6 +157,41 @@ When investigation results are supplied:
 
 An investigation with resolved=true means the investigator
 answered its question. It does not mean a defect was confirmed.
+
+EVIDENCE CONFIDENCE AND REPORTING:
+
+- Distinguish direct observations, reasonable inferences,
+  and unverified claims when assessing findings.
+- A finding's verification status must reflect the strength
+  of evidence supporting the actual reported problem.
+- Do not upgrade a finding from POTENTIAL or NEEDS_REVIEW
+  to CONFIRMED solely because an investigation completed.
+- An investigation with resolved=true means its question
+  was answered, not that a defect was established.
+- An investigation with resolved=false may still provide
+  useful evidence supporting part of a finding.
+- When evidence confirms only part of a finding, preserve
+  the confirmed observations and explicitly identify the
+  remaining uncertainty.
+- Do not present inferred image contents as visually verified.
+- Do not claim screen-reader announcements were tested when
+  only browser accessibility snapshots were examined.
+- When an accessibility snapshot exposes duplicated link text,
+  report that the accessible name contains duplicated text.
+  Describe screen-reader announcements as likely consequences
+  unless actual screen-reader testing was performed.
+- Do not claim that a link redirects, fails to navigate,
+  or triggers a particular browser behaviour unless that
+  behaviour was observed or independently verified.
+- Avoid absolute claims such as "all users", "always",
+  "never", or "will" when the evidence supports only a
+  possible or likely consequence.
+- Recommendations may address likely problems, but their
+  justification must not overstate the available evidence.
+- Reproduction steps must distinguish actions already
+  performed from suggested manual verification.
+- Preserve useful findings rather than discarding them
+  merely because some consequences remain unverified.
 """
 
 

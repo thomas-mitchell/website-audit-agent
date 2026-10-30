@@ -139,8 +139,22 @@ def test_audit_graph(tmp_path, monkeypatch):
                 ],
             }
 
+        # Second review: verify investigation evidence is available.
+        results = state["investigation_results"]
+
+        assert len(results) == 1
+        assert results[0].resolved is True
+        assert "contentinfo" in results[0].answer
+
+        # Simulate the reviewer removing an unsupported finding.
+        revised_findings = [
+            finding
+            for finding in state["findings"]
+            if finding.title != "Test accessibility issue"
+        ]
+
         return {
-            "findings": state["findings"],
+            "findings": revised_findings,
             "investigations": [],
         }
 
@@ -221,20 +235,20 @@ def test_audit_graph(tmp_path, monkeypatch):
         assert Path(path).exists()
 
     # Verify aggregation
-    assert len(result["findings"]) == 3
+    assert len(result["findings"]) == 2
     assert all(isinstance(f, Finding) for f in result["findings"])
 
     assert {f.title for f in result["findings"]} == {
-        "Test accessibility issue",
         "Test seo issue",
         "Test ux issue",
     }
 
     # Verify final report
     assert "Example University" in result["report"]
-    assert "Test accessibility issue" in result["report"]
+    assert "Test accessibility issue" not in result["report"]
     assert "Test seo issue" in result["report"]
     assert "Test ux issue" in result["report"]
+    
     assert review_calls == 2
     assert len(result["investigation_results"]) == 1
     assert result["investigation_results"][0].resolved is True

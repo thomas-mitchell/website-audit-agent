@@ -181,3 +181,42 @@ def test_browser_interaction_tools(tmp_path):
             assert after["scroll_y"] > 0
 
     asyncio.run(run_test())
+
+
+def test_invalid_selector_returns_tool_error(tmp_path):
+    async def run_test():
+        html = """
+        <html>
+            <body>
+                <p>Our Partners</p>
+            </body>
+        </html>
+        """
+
+        test_file = tmp_path / "test.html"
+        test_file.write_text(html, encoding="utf-8")
+
+        async with BrowserSession(test_file.as_uri()) as session:
+            tools = {
+                tool.name: tool
+                for tool in create_browser_tools(session)
+            }
+
+            # Invalid jQuery-style selector.
+            result = await tools["inspect_element"].ainvoke({
+                "selector": 'p:contains("Our Partners")'
+            })
+
+            assert result["success"] is False
+            assert "error" in result
+            assert "has-text" in result["hint"]
+
+            # The same tool should remain usable afterward.
+            result = await tools["inspect_element"].ainvoke({
+                "selector": 'p:has-text("Our Partners")'
+            })
+
+            assert result["match_count"] == 1
+            assert result["elements"][0]["text"] == "Our Partners"
+
+    asyncio.run(run_test())
