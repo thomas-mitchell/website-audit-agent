@@ -66,7 +66,6 @@ IMPORTANT:
   by the supplied evidence.
 - Do not claim to have visited the website or performed additional tests.
 - Return findings in order of severity, highest first.
-- Set category to "reviewed".
 - Provide a summary of the consolidated results.
 
 EVIDENCE VALIDATION RULES:
@@ -134,6 +133,30 @@ Do not request investigations simply to reproduce a confirmed issue.
 Mark findings requiring investigation as NEEDS_REVIEW.
 
 Limit investigation requests to the 5 most important unresolved questions.
+
+BROWSER INVESTIGATION RESULTS:
+
+You may receive additional evidence gathered by a browser
+investigation agent.
+
+When investigation results are supplied:
+
+- Reassess the corresponding findings using the new evidence.
+- Treat investigation results as observations, not conclusions
+  that must be accepted uncritically.
+- Distinguish successful browser operations from successful
+  website functionality.
+- Remove findings whose original premises have been disproven.
+- Update verification status when the evidence supports doing so.
+- Preserve unresolved findings when additional verification
+  is still genuinely necessary.
+- Do not claim that screen-reader testing occurred merely
+  because accessibility snapshots were inspected.
+- Do not request an investigation that has already been
+  performed unless genuinely new evidence is required.
+
+An investigation with resolved=true means the investigator
+answered its question. It does not mean a defect was confirmed.
 """
 
 
@@ -156,6 +179,11 @@ def review_findings(state: AuditState) -> dict:
         for finding in state["findings"]
     ]
 
+    investigation_results = [
+        result.model_dump(mode="json")
+        for result in state.get("investigation_results", [])
+    ]
+
     prepared_evidence = json.loads(
         Path(state["prepared_evidence"]).read_text(encoding="utf-8")
     )
@@ -165,14 +193,25 @@ def review_findings(state: AuditState) -> dict:
         HumanMessage(content=json.dumps({
             "url": state["url"],
             "evidence": prepared_evidence,
-            "findings": findings
+            "findings": findings,
+            "investigation_results": investigation_results
         }))
     ])
 
     output_dir = Path("runs") / state["run_id"] / "analysis"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    output_path = output_dir / "reviewed.json"
+    has_investigations = bool(
+        state.get("investigation_results")
+    )
+
+    filename = (
+        "reviewed_final.json"
+        if has_investigations
+        else "reviewed.json"
+    )
+
+    output_path = output_dir / filename
 
     output_path.write_text(
         response.model_dump_json(indent=2),

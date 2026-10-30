@@ -1,12 +1,13 @@
+import asyncio
 from uuid import uuid4
 
 from auditor.graph import build_graph
 
 
-def main():
+async def main():
     graph = build_graph()
 
-    result = graph.invoke({
+    result = await graph.ainvoke({
         "url": "https://www.boomworks.com.au/",
         "run_id": str(uuid4()),
         "evidence_files": {},
@@ -29,4 +30,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

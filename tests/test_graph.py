@@ -1,9 +1,14 @@
 import json
 from pathlib import Path
+import asyncio
 
 from auditor.graph import build_graph
 from auditor.models.findings import Finding
-
+from auditor.models.investigation import (
+    InvestigationRequest,
+    InvestigationResult,
+    InvestigationType,
+)
 
 def test_audit_graph(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
@@ -115,10 +120,41 @@ def test_audit_graph(tmp_path, monkeypatch):
 
         return analyse
 
+    review_calls = 0
     def mock_review(state):
+        nonlocal review_calls
+
+        review_calls += 1
+
+        if review_calls == 1:
+            return {
+                "findings": state["findings"],
+                "investigations": [
+                    InvestigationRequest(
+                        finding_title="Test accessibility issue",
+                        investigation_type=InvestigationType.ACCESSIBILITY,
+                        question="Is the footer exposed as a landmark?",
+                        target="footer",
+                    )
+                ],
+            }
+
         return {
             "findings": state["findings"],
-            "investigations": []
+            "investigations": [],
+        }
+
+    async def mock_investigate(state):
+        return {
+            "investigation_results": [
+                InvestigationResult(
+                    finding_title="Test accessibility issue",
+                    question="Is the footer exposed as a landmark?",
+                    answer="The footer is exposed as contentinfo.",
+                    evidence=["Accessibility snapshot: contentinfo"],
+                    resolved=True,
+                )
+            ]
         }
 
     # Build graph with mocked external tools and LLMs
@@ -128,21 +164,25 @@ def test_audit_graph(tmp_path, monkeypatch):
         accessibility_node=mock_analyst("accessibility"),
         seo_node=mock_analyst("seo"),
         ux_node=mock_analyst("ux"),
-        review_node=mock_review
+        review_node=mock_review,
+        investigation_node=mock_investigate
     )
 
     # Execute the complete graph
-    result = graph.invoke({
-        "url": test_file.as_uri(),
-        "run_id": "graph-test",
-        "evidence_files": {},
-        "prepared_evidence": "",
-        "analysis_files": {},
-        "findings": [],
-        "investigations": [],
-        "investigation_results": [],
-        "report": ""
-    })
+    async def run_graph():
+        return await graph.ainvoke({
+            "url": test_file.as_uri(),
+            "run_id": "graph-test",
+            "evidence_files": {},
+            "prepared_evidence": "",
+            "analysis_files": {},
+            "findings": [],
+            "investigations": [],
+            "investigation_results": [],
+            "report": ""
+        })
+
+    result = asyncio.run(run_graph())
 
     # Verify page capture
     assert Path(
@@ -195,3 +235,7 @@ def test_audit_graph(tmp_path, monkeypatch):
     assert "Test accessibility issue" in result["report"]
     assert "Test seo issue" in result["report"]
     assert "Test ux issue" in result["report"]
+    assert review_calls == 2
+    assert len(result["investigation_results"]) == 1
+    assert result["investigation_results"][0].resolved is True
+    assert result["investigations"] == []
