@@ -64,7 +64,7 @@ def test_browser_session_and_langchain_tool(tmp_path):
         async with BrowserSession(test_file.as_uri()) as session:
             tools = create_browser_tools(session)
 
-            assert len(tools) == 5
+            assert len(tools) == 6
             assert tools[0].name == "inspect_element"
             assert tools[1].name == "inspect_accessibility"
 
@@ -250,7 +250,7 @@ def test_capture_screenshot(tmp_path):
                 for tool in create_browser_tools(session)
             }
 
-            assert len(tools) == 5
+            assert len(tools) == 6
 
             # Capture a specific element.
             result = await tools["capture_screenshot"].ainvoke({
@@ -280,5 +280,75 @@ def test_capture_screenshot(tmp_path):
 
             assert result["success"] is False
             assert "error" in result
+
+    asyncio.run(run_test())
+
+
+def test_analyse_screenshot_tool(tmp_path, monkeypatch):
+    async def run_test():
+        html = """
+        <html>
+            <body>
+                <h1 id="heading">Visual Test</h1>
+            </body>
+        </html>
+        """
+
+        test_file = tmp_path / "test.html"
+        test_file.write_text(html, encoding="utf-8")
+
+        screenshot_dir = tmp_path / "screenshots"
+
+        async def mock_analyse_image(path, question):
+            assert path.exists()
+            assert "What text" in question
+
+            return "The screenshot contains the text Visual Test."
+
+        monkeypatch.setattr(
+            "auditor.tools.langchain_browser.analyse_image",
+            mock_analyse_image,
+        )
+
+        async with BrowserSession(
+            test_file.as_uri(),
+            output_dir=screenshot_dir,
+        ) as session:
+
+            tools = {
+                tool.name: tool
+                for tool in create_browser_tools(session)
+            }
+
+            assert len(tools) == 6
+
+            screenshot = await tools[
+                "capture_screenshot"
+            ].ainvoke({
+                "selector": "#heading",
+            })
+
+            assert screenshot["success"] is True
+
+            result = await tools[
+                "analyse_screenshot"
+            ].ainvoke({
+                "path": screenshot["path"],
+                "question": "What text is visible?",
+            })
+
+            assert result["success"] is True
+            assert "Visual Test" in result["answer"]
+
+            # Arbitrary files must not be accessible.
+            result = await tools[
+                "analyse_screenshot"
+            ].ainvoke({
+                "path": str(test_file),
+                "question": "Read this file",
+            })
+
+            assert result["success"] is False
+            assert "outside" in result["error"]
 
     asyncio.run(run_test())

@@ -1,6 +1,8 @@
 from langchain_core.tools import tool
 from playwright.async_api import Error as PlaywrightError
+from pathlib import Path
 
+from auditor.tools.vision import analyse_screenshot as analyse_image
 from auditor.tools.session import BrowserSession
 
 
@@ -120,6 +122,76 @@ def create_browser_tools(session: BrowserSession):
                 "error": str(exc).splitlines()[0],
             }
 
+
+    @tool
+    async def analyse_screenshot(
+        path: str,
+        question: str,
+    ) -> dict:
+        """Visually analyse a previously captured screenshot.
+
+        Use capture_screenshot first, then pass its returned path
+        to this tool.
+
+        The image is examined by a vision-capable language model.
+
+        Suitable questions include:
+        - What does this image depict?
+        - Does this element contain readable text?
+        - Are elements visibly overlapping?
+        - Does this image convey meaningful information?
+
+        Visual analysis cannot establish DOM attributes,
+        accessibility-tree behaviour or WCAG compliance.
+        """
+        screenshot_path = Path(path).resolve()
+        screenshot_dir = session.output_dir.resolve()
+
+        # Only allow screenshots belonging to this browser session.
+        if not screenshot_path.is_relative_to(screenshot_dir):
+            return {
+                "success": False,
+                "error": "Screenshot is outside the permitted directory.",
+            }
+
+        if not screenshot_path.is_file():
+            return {
+                "success": False,
+                "error": f"Screenshot not found: {path}",
+            }
+
+        if screenshot_path.suffix.lower() != ".png":
+            return {
+                "success": False,
+                "error": "Only PNG screenshots are supported.",
+            }
+
+        # Avoid unexpectedly large image requests.
+        if screenshot_path.stat().st_size > 10 * 1024 * 1024:
+            return {
+                "success": False,
+                "error": "Screenshot exceeds the 10 MB limit.",
+            }
+
+        try:
+            answer = await analyse_image(
+                path=screenshot_path,
+                question=question,
+            )
+
+            return {
+                "success": True,
+                "path": str(screenshot_path),
+                "question": question,
+                "answer": answer,
+            }
+
+        except Exception as exc:
+            return {
+                "success": False,
+                "error": f"Visual analysis failed: {exc}",
+            }
+
     
     return [
         inspect_element,
@@ -127,4 +199,7 @@ def create_browser_tools(session: BrowserSession):
         inspect_scroll_position,
         click_element,
         capture_screenshot,
+        analyse_screenshot,
     ]
+
+

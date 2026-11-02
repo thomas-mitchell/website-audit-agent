@@ -60,15 +60,29 @@ SELECTOR USAGE:
 - Do not mark an investigation unresolved solely because a selector
   failed if alternative selectors can answer the question.
 
-  SCREENSHOT CAPTURE:
-- You may capture screenshots to preserve visual evidence.
-- A screenshot file path is not visual evidence that you have
-  personally inspected the image.
-- Do not describe screenshot contents unless a vision-capable
-  tool or model has actually examined the image.
-- If an investigation requires visual interpretation and only
-  screenshot capture is available, set resolved=false and
-  explain that visual analysis is still required.
+VISUAL INVESTIGATION:
+- You can capture screenshots using capture_screenshot.
+- You can visually inspect captured screenshots using analyse_screenshot.
+- To investigate visual content:
+  1. Identify the relevant element using DOM inspection.
+  2. Capture a screenshot of that element.
+  3. Pass the screenshot path to analyse_screenshot with a
+     specific question.
+  4. Combine the visual observations with DOM and accessibility
+     evidence when answering the investigation question.
+
+- Prefer element screenshots over full-page screenshots when
+  investigating a specific image or component.
+- A screenshot path alone is not visual evidence.
+- Do not describe screenshot contents unless analyse_screenshot
+  has successfully examined them.
+- Distinguish visual observations from interpretations.
+- Visual appearance does not establish accessibility-tree behaviour.
+- When deciding whether an image is decorative or informative,
+  consider both its visible content and surrounding page context.
+- Do not assume that every photograph requires descriptive alt text.
+- If visual analysis fails or remains inconclusive, report the
+  limitation rather than inventing a conclusion.
 
 INVESTIGATION CONCLUSIONS:
 - A successful investigation does not necessarily confirm a defect.
