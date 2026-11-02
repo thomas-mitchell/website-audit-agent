@@ -60,6 +60,16 @@ SELECTOR USAGE:
 - Do not mark an investigation unresolved solely because a selector
   failed if alternative selectors can answer the question.
 
+  SCREENSHOT CAPTURE:
+- You may capture screenshots to preserve visual evidence.
+- A screenshot file path is not visual evidence that you have
+  personally inspected the image.
+- Do not describe screenshot contents unless a vision-capable
+  tool or model has actually examined the image.
+- If an investigation requires visual interpretation and only
+  screenshot capture is available, set resolved=false and
+  explain that visual analysis is still required.
+
 INVESTIGATION CONCLUSIONS:
 - A successful investigation does not necessarily confirm a defect.
 - An investigation may resolve a question by disproving its premise.

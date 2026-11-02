@@ -1,16 +1,23 @@
 from playwright.async_api import async_playwright
-
+from pathlib import Path
 from auditor.tools.browser import (
     inspect_element,
     inspect_accessibility,
     inspect_scroll_position,
     click_element,
+    capture_screenshot,
 )
 
 
 class BrowserSession:
-    def __init__(self, url: str):
+    def __init__(
+        self,
+        url: str,
+        output_dir: Path | None = None,
+    ):
         self.url = url
+        self.output_dir = output_dir or Path("runs") / "screenshots"
+
         self.playwright = None
         self.browser = None
         self.page = None
@@ -62,3 +69,15 @@ class BrowserSession:
 
     async def click_element(self, selector: str) -> dict:
         return await click_element(self.page, selector)
+
+    async def capture_screenshot(
+        self,
+        selector: str | None = None,
+        full_page: bool = False,
+    ) -> dict:
+        return await capture_screenshot(
+            self.page,
+            self.output_dir,
+            selector,
+            full_page,
+        )

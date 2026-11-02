@@ -1,5 +1,5 @@
 import asyncio
-
+from pathlib import Path
 from playwright.async_api import async_playwright
 
 from auditor.tools.browser import inspect_element
@@ -64,7 +64,7 @@ def test_browser_session_and_langchain_tool(tmp_path):
         async with BrowserSession(test_file.as_uri()) as session:
             tools = create_browser_tools(session)
 
-            assert len(tools) == 4
+            assert len(tools) == 5
             assert tools[0].name == "inspect_element"
             assert tools[1].name == "inspect_accessibility"
 
@@ -218,5 +218,67 @@ def test_invalid_selector_returns_tool_error(tmp_path):
 
             assert result["match_count"] == 1
             assert result["elements"][0]["text"] == "Our Partners"
+
+    asyncio.run(run_test())
+
+
+def test_capture_screenshot(tmp_path):
+    async def run_test():
+        html = """
+        <html>
+            <body>
+                <main>
+                    <h1 id="heading">Screenshot Test</h1>
+                    <p>Some content</p>
+                </main>
+            </body>
+        </html>
+        """
+
+        test_file = tmp_path / "test.html"
+        test_file.write_text(html, encoding="utf-8")
+
+        screenshot_dir = tmp_path / "screenshots"
+
+        async with BrowserSession(
+            test_file.as_uri(),
+            output_dir=screenshot_dir,
+        ) as session:
+
+            tools = {
+                tool.name: tool
+                for tool in create_browser_tools(session)
+            }
+
+            assert len(tools) == 5
+
+            # Capture a specific element.
+            result = await tools["capture_screenshot"].ainvoke({
+                "selector": "#heading",
+            })
+
+            assert result["success"] is True
+            assert result["capture_type"] == "element"
+
+            screenshot_path = Path(result["path"])
+
+            assert screenshot_path.exists()
+            assert screenshot_path.stat().st_size > 0
+            assert screenshot_path.suffix == ".png"
+
+            # Capture the viewport.
+            result = await tools["capture_screenshot"].ainvoke({})
+
+            assert result["success"] is True
+            assert result["capture_type"] == "viewport"
+            assert Path(result["path"]).exists()
+
+            # Invalid selector should return an error.
+            result = await tools["capture_screenshot"].ainvoke({
+                "selector": "#does-not-exist",
+            })
+
+            assert result["success"] is False
+            assert "error" in result
 
     asyncio.run(run_test())

@@ -1,4 +1,7 @@
 from playwright.async_api import Page
+from pathlib import Path
+from uuid import uuid4
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 
 async def inspect_element(page: Page, selector: str) -> dict:
@@ -48,7 +51,6 @@ async def inspect_element(page: Page, selector: str) -> dict:
         "truncated": count > 10
     }
 
-
 async def inspect_accessibility(
     page: Page,
     selector: str = "body",
@@ -93,9 +95,6 @@ async def inspect_scroll_position(page: Page) -> dict:
             document_height: document.documentElement.scrollHeight
         })
     """)
-
-from playwright.async_api import TimeoutError as PlaywrightTimeoutError
-
 
 async def click_element(page: Page, selector: str) -> dict:
     """Click an element and observe the resulting browser state."""
@@ -143,3 +142,52 @@ async def click_element(page: Page, selector: str) -> dict:
             "error": f"Click timed out: {exc}",
             "before": before,
         }
+
+async def capture_screenshot(
+    page: Page,
+    output_dir: Path,
+    selector: str | None = None,
+    full_page: bool = False,
+) -> dict:
+    """Capture a screenshot of an element, viewport, or full page."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"screenshot-{uuid4().hex[:12]}.png"
+    output_path = output_dir / filename
+
+    if selector:
+        locator = page.locator(selector)
+        count = await locator.count()
+
+        if count != 1:
+            return {
+                "success": False,
+                "selector": selector,
+                "error": (
+                    f"Expected exactly one matching element, found {count}"
+                ),
+            }
+
+        await locator.screenshot(
+            path=str(output_path),
+            timeout=10000,
+        )
+
+        capture_type = "element"
+
+    else:
+        await page.screenshot(
+            path=str(output_path),
+            full_page=full_page,
+            timeout=15000,
+        )
+
+        capture_type = "full_page" if full_page else "viewport"
+
+    return {
+        "success": True,
+        "capture_type": capture_type,
+        "selector": selector,
+        "path": str(output_path),
+    }

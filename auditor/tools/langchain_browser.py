@@ -89,10 +89,42 @@ def create_browser_tools(session: BrowserSession):
         except PlaywrightError as exc:
             return selector_error(selector, exc)
 
+
+    @tool
+    async def capture_screenshot(
+        selector: str | None = None,
+        full_page: bool = False,
+    ) -> dict:
+        """Capture a screenshot for later visual inspection.
+
+        If selector is provided, capture the matching element.
+        Otherwise capture the viewport, or the entire page when
+        full_page=True.
+
+        Use Playwright selectors, not jQuery selectors.
+
+        IMPORTANT:
+        This tool saves an image and returns its file path.
+        It does NOT visually analyse the image.
+        Do not claim to have inspected screenshot contents.
+        """
+        try:
+            return await session.capture_screenshot(
+                selector=selector,
+                full_page=full_page,
+            )
+        except PlaywrightError as exc:
+            return {
+                "success": False,
+                "selector": selector,
+                "error": str(exc).splitlines()[0],
+            }
+
     
     return [
         inspect_element,
         inspect_accessibility,
         inspect_scroll_position,
         click_element,
+        capture_screenshot,
     ]
