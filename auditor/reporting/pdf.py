@@ -100,6 +100,44 @@ async def generate_pdf(
                 }
             """)
 
+            image_status = await page.locator("img").evaluate_all("""
+                images => images.map(img => ({
+                    src: img.getAttribute("src"),
+                    html: img.outerHTML,
+                    loaded: img.complete && img.naturalWidth > 0
+                }))
+            """)
+
+            missing_src = [
+                image
+                for image in image_status
+                if not image["src"]
+            ]
+
+            failed_images = [
+                image
+                for image in image_status
+                if image["src"] and not image["loaded"]
+            ]
+
+            if missing_src:
+                print(
+                    f"WARNING: {len(missing_src)} image elements "
+                    "have no src attribute:"
+                )
+
+                for image in missing_src:
+                    print(f"  {image['html']}")
+
+            if failed_images:
+                raise RuntimeError(
+                    "Failed to load report images:\n"
+                    + "\n".join(
+                        f"  {image['src']}"
+                        for image in failed_images
+                    )
+                )
+
             await page.pdf(
                 path=str(output_path),
                 format="A4",

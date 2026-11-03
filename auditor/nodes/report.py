@@ -1,7 +1,11 @@
 import json
 import os
+import re
+from html import escape
 from collections import Counter
 from pathlib import Path
+import re
+from html import escape
 
 from auditor.models.findings import Severity
 from auditor.state import AuditState
@@ -16,6 +20,22 @@ SEVERITY_ORDER = [
     Severity.INFO,
 ]
 
+HTML_TAG = re.compile(r"</?[A-Za-z][^>]*>")
+
+
+def escape_html_in_markdown(text: str) -> str:
+    """Preserve HTML snippets as visible text in Markdown."""
+    return HTML_TAG.sub(
+        lambda match: escape(match.group(0)),
+        text,
+    )
+
+def format_analysis_answer(answer: str) -> list[str]:
+    """Keep generated analysis visually subordinate to its finding."""
+    return [
+        f"> {escape_html_in_markdown(line)}" if line.strip() else ">"
+        for line in answer.splitlines()
+    ]
 
 def format_screenshot_evidence(investigation, report_dir: Path) -> list[str]:
     """Format investigation screenshots as Markdown."""
@@ -54,7 +74,7 @@ def format_screenshot_evidence(investigation, report_dir: Path) -> list[str]:
                 "",
                 "**Visual observations:**",
                 "",
-                screenshot.analysis_answer,
+                escape_html_in_markdown(screenshot.analysis_answer),
             ])
 
     return lines
@@ -128,15 +148,15 @@ def render_markdown_report(
             "",
             "#### Description",
             "",
-            finding.description,
+            escape_html_in_markdown(finding.description),
             "",
             "#### Impact",
             "",
-            finding.impact,
+            escape_html_in_markdown(finding.impact),
             "",
             "#### Recommendation",
             "",
-            finding.recommendation,
+            escape_html_in_markdown(finding.recommendation),
         ])
 
         if finding.evidence:
@@ -147,7 +167,7 @@ def render_markdown_report(
             ])
 
             for evidence in finding.evidence:
-                lines.append(f"- {evidence}")
+                lines.append(f"- {escape_html_in_markdown(evidence)}")
 
         if finding.reproduction_steps:
             lines.extend([
@@ -159,7 +179,7 @@ def render_markdown_report(
             for step_index, step in enumerate(
                 finding.reproduction_steps, start=1
             ):
-                lines.append(f"{step_index}. {step}")
+                lines.append(f"{step_index}. {escape_html_in_markdown(step)}")
 
         if finding.references:
             lines.extend([
@@ -178,9 +198,9 @@ def render_markdown_report(
                 "",
                 "#### Investigation",
                 "",
-                f"**Question:** {investigation.question}",
+                f"**Question:** {escape_html_in_markdown(investigation.question)}",
                 "",
-                f"**Result:** {investigation.answer}",
+                f"**Result:** {escape_html_in_markdown(investigation.answer)}",
                 "",
                 f"**Resolved:** "
                 f"{'Yes' if investigation.resolved else 'No'}",
@@ -221,9 +241,9 @@ def render_markdown_report(
         for investigation in unmatched:
             lines.extend([
                 "",
-                f"### {investigation.finding_title}",
+                f"### {escape_html_in_markdown(investigation.finding_title)}",
                 "",
-                investigation.answer,
+                escape_html_in_markdown(investigation.answer),
             ])
 
             lines.extend(
