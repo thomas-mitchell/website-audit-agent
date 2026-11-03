@@ -13,6 +13,8 @@ from langchain_core.messages import (
 from auditor.models.investigation import (
     InvestigationRequest,
     InvestigationResult,
+    ScreenshotEvidence,
+    InvestigationConclusion,
 )
 from auditor.tools.langchain_browser import create_browser_tools
 from auditor.tools.session import BrowserSession
@@ -178,6 +180,8 @@ async def investigate(
         ),
     ]
 
+    screenshots: dict[str, ScreenshotEvidence] = {}
+
     async with BrowserSession(
         url,
         output_dir=output_dir,
@@ -223,6 +227,25 @@ async def investigate(
                     tool = tools_by_name[name]
                     result = await tool.ainvoke(args)
 
+                    if name == "capture_screenshot" and result.get("success"):
+                        screenshot_path = Path(result["path"]).resolve()
+
+                        screenshots[str(screenshot_path)] = ScreenshotEvidence(
+                            path=Path(result["path"]).as_posix(),
+                            capture_type=result["capture_type"],
+                            selector=result.get("selector"),
+                        )
+
+                    elif name == "analyse_screenshot" and result.get("success"):
+                        screenshot_path = str(Path(result["path"]).resolve())
+
+                        screenshot = screenshots.get(screenshot_path)
+
+                        if screenshot:
+                            screenshot.analysed = True
+                            screenshot.analysis_question = result["question"]
+                            screenshot.analysis_answer = result["answer"]
+
                 except Exception as exc:
                     result = {
                         "success": False,
@@ -247,7 +270,7 @@ async def investigate(
 
         # The conclusion phase has no tools.
         conclusion_model = model.with_structured_output(
-            InvestigationResult
+            InvestigationConclusion
         )
 
         conclusion_messages = [
@@ -266,6 +289,11 @@ async def investigate(
             ),
         ]
 
-        return await conclusion_model.ainvoke(
+        conclusion = await conclusion_model.ainvoke(
             conclusion_messages
+        )
+
+        return InvestigationResult(
+            **conclusion.model_dump(),
+            screenshots=list(screenshots.values()),
         )

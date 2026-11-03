@@ -28,6 +28,28 @@ class InvestigationRequest(BaseModel):
         description="CSS selector, URL, fragment identifier, or element description"
     )
 
+class ScreenshotEvidence(BaseModel):
+    path: str = Field(
+        description="Path to the screenshot, relative to the project root"
+    )
+
+    capture_type: str = Field(
+        description="element, viewport, or full_page"
+    )
+
+    selector: str | None = Field(
+        default=None,
+        description="Selector used for an element screenshot"
+    )
+
+    analysed: bool = Field(
+        default=False,
+        description="Whether visual analysis completed successfully"
+    )
+
+    analysis_question: str | None = None
+    analysis_answer: str | None = None
+
 class InvestigationResult(BaseModel):
     finding_title: str = Field(
         description="Title of the finding being investigated"
@@ -50,6 +72,11 @@ class InvestigationResult(BaseModel):
         description="Whether the investigation produced enough evidence to answer the question"
     )
 
+    screenshots: list[ScreenshotEvidence] = Field(
+        default_factory=list,
+        description="Screenshots captured during this investigation"
+    )
+
 class ReviewResult(BaseModel):
     summary: str = Field(
         description="Summary of the consolidated findings"
@@ -64,3 +91,10 @@ class ReviewResult(BaseModel):
         default_factory=list,
         description="Questions requiring additional browser investigation"
     )
+
+class InvestigationConclusion(BaseModel):
+    finding_title: str
+    question: str
+    answer: str
+    evidence: list[str] = Field(default_factory=list)
+    resolved: bool

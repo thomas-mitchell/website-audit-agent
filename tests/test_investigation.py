@@ -1,11 +1,13 @@
 import asyncio
 from pathlib import Path
+import json
 
 from auditor.nodes.investigation import investigate_findings
 from auditor.models.investigation import (
     InvestigationRequest,
     InvestigationResult,
     InvestigationType,
+    ScreenshotEvidence,
 )
 
 
@@ -37,6 +39,19 @@ def test_investigation_uses_run_screenshot_directory(
             answer="The image contains a test logo.",
             evidence=["Visual inspection identified a logo."],
             resolved=True,
+            screenshots=[
+                ScreenshotEvidence(
+                    path=(
+                        "runs/test-run/evidence/screenshots/"
+                        "screenshot-test.png"
+                    ),
+                    capture_type="element",
+                    selector="#test-image",
+                    analysed=True,
+                    analysis_question="What does the image show?",
+                    analysis_answer="A test logo.",
+                )
+            ],
         )
 
     monkeypatch.setattr(
@@ -64,3 +79,16 @@ def test_investigation_uses_run_screenshot_directory(
     )
 
     assert output_path.exists()
+
+    saved_results = json.loads(
+        output_path.read_text(encoding="utf-8")
+    )
+
+    assert len(saved_results) == 1
+    assert len(saved_results[0]["screenshots"]) == 1
+
+    screenshot = saved_results[0]["screenshots"][0]
+
+    assert screenshot["capture_type"] == "element"
+    assert screenshot["analysed"] is True
+    assert screenshot["selector"] == "#test-image"
