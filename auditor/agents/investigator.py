@@ -2,8 +2,12 @@ import json
 import os
 
 from dotenv import load_dotenv
-from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
+from langchain_core.messages import (
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 
 from auditor.models.investigation import (
     InvestigationRequest,
@@ -84,6 +88,28 @@ VISUAL INVESTIGATION:
 - If visual analysis fails or remains inconclusive, report the
   limitation rather than inventing a conclusion.
 
+INVESTIGATION EFFICIENCY AND STOPPING:
+
+- Your goal is to answer the investigation question, not to
+  exhaustively inspect every matching element on the page.
+- Before each additional tool call, consider whether the
+  available evidence is already sufficient to answer the question.
+- Stop investigating once sufficient evidence has been collected.
+- Prefer a small number of well-chosen observations over broad
+  searches returning dozens of unrelated elements.
+- Do not repeat a tool call with the same arguments unless the
+  page state has changed or there is a specific reason to retry.
+- Do not repeat screenshot analysis when the previous analysis
+  already answered the visual question.
+- If further inspection is unlikely to change the conclusion,
+  produce the InvestigationResult immediately.
+- If the question cannot be answered with the available tools,
+  report the limitation and finish rather than searching indefinitely.
+- Do not attempt to inspect every image on a page unless the
+  investigation explicitly requires an exhaustive inventory.
+- Distinguish evidence sufficient to answer the question from
+  evidence sufficient to confirm a particular accessibility defect.
+
 INVESTIGATION CONCLUSIONS:
 - A successful investigation does not necessarily confirm a defect.
 - An investigation may resolve a question by disproving its premise.
@@ -125,6 +151,10 @@ EVIDENCE AND CERTAINTY:
 """
 
 
+MAX_TOOL_CALLS = 10
+MAX_MODEL_CALLS = 12
+
+
 async def investigate(
     url: str,
     request: InvestigationRequest,
@@ -136,29 +166,101 @@ async def investigate(
         os.getenv("AUDITOR_MODEL", "anthropic:claude-sonnet-4-6")
     )
 
+    messages = [
+        SystemMessage(content=INVESTIGATOR_PROMPT),
+        HumanMessage(
+            content=json.dumps({
+                "url": url,
+                "investigation": request.model_dump(mode="json"),
+            })
+        ),
+    ]
+
     async with BrowserSession(url) as session:
-        agent = create_agent(
-            model=model,
-            tools=create_browser_tools(session),
-            system_prompt=INVESTIGATOR_PROMPT,
-            response_format=InvestigationResult,
-        )
+        tools = create_browser_tools(session)
+        tools_by_name = {tool.name: tool for tool in tools}
 
-        result = await agent.ainvoke(
-            {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": json.dumps({
-                            "url": url,
-                            "investigation": request.model_dump(
-                                mode="json"
-                            ),
-                        }),
+        tool_model = model.bind_tools(tools)
+
+        tool_calls_used = 0
+
+        for _ in range(MAX_MODEL_CALLS):
+            remaining = MAX_TOOL_CALLS - tool_calls_used
+
+            if remaining <= 0:
+                break
+
+            response = await tool_model.ainvoke(messages)
+
+            if not response.tool_calls:
+                messages.append(response)
+                break
+
+            # Avoid partially executing a batch of tool calls.
+            if len(response.tool_calls) > remaining:
+                print(
+                    "[Investigator] Insufficient budget for "
+                    "the next tool-call batch."
+                )
+                break
+
+            messages.append(response)
+
+            for tool_call in response.tool_calls:
+                name = tool_call["name"]
+                args = tool_call["args"]
+
+                print(f"[Investigator] Calling {name}: {args}")
+
+                tool_calls_used += 1
+
+                try:
+                    tool = tools_by_name[name]
+                    result = await tool.ainvoke(args)
+
+                except Exception as exc:
+                    result = {
+                        "success": False,
+                        "error": str(exc),
                     }
-                ]
-            },
-            config={"recursion_limit": 12},
+
+                print(
+                    f"[Investigator] Result: {str(result)[:500]}"
+                )
+
+                messages.append(
+                    ToolMessage(
+                        content=json.dumps(result, default=str),
+                        tool_call_id=tool_call["id"],
+                    )
+                )
+
+        print(
+            "[Investigator] Evidence collection complete. "
+            f"Tool calls used: {tool_calls_used}/{MAX_TOOL_CALLS}"
         )
 
-        return result["structured_response"]
+        # The conclusion phase has no tools.
+        conclusion_model = model.with_structured_output(
+            InvestigationResult
+        )
+
+        conclusion_messages = [
+            *messages,
+            HumanMessage(
+                content=(
+                    "Evidence collection is complete. "
+                    "Do not request additional tools. "
+                    "Produce the final InvestigationResult using "
+                    "only the evidence collected above. "
+                    "Answer the original investigation question. "
+                    "If the evidence is insufficient, explain the "
+                    "limitations and set resolved=false. "
+                    "Do not invent observations or test results."
+                )
+            ),
+        ]
+
+        return await conclusion_model.ainvoke(
+            conclusion_messages
+        )
