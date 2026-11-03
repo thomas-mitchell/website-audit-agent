@@ -106,33 +106,57 @@ VERIFICATION:
   
 INVESTIGATION REQUESTS:
 
-You can request additional browser investigation when the supplied
-evidence is insufficient to establish an important conclusion.
+You have access to a separate browser investigation agent that
+can inspect the live page, interact with elements, examine the
+accessibility tree, capture screenshots, and visually analyse them.
 
-Examples:
-- A fragment link exists, but its scrolling behaviour is unknown.
-- An image may be informational, but its purpose is unclear.
-- Duplicate DOM content may or may not be exposed to screen readers.
-- An interactive element may fail when clicked.
-- An element's visibility or accessible name needs verification.
+Your responsibility is to identify findings that would materially
+benefit from additional investigation.
+
+MANDATORY INVESTIGATION RULES:
+
+- When a finding depends on identifying the visual contents of
+  an image, and no visual analysis of that image has been performed,
+  you MUST request a VISUAL investigation.
+
+- When an image has alt="" and its informational purpose is
+  uncertain, do not mark the accessibility defect CONFIRMED
+  solely from its filename, dimensions, or position.
+
+- When a finding depends on an interaction outcome that has not
+  been tested, request an INTERACTION investigation if the
+  result could materially change the finding.
+
+- When a finding depends on an accessible name or role that
+  cannot be established from the supplied evidence, request
+  an ACCESSIBILITY investigation.
+
+- Do not treat an analyst's speculation as independent evidence.
+
+- Do not mark an issue CONFIRMED merely to avoid requesting
+  an investigation.
+
+- Do not request investigations for issues already conclusively
+  established by axe-core or Lighthouse.
+
+- Do not repeat investigations already completed.
 
 For each investigation request:
 - Identify the corresponding finding by its exact title.
 - Select the appropriate investigation type.
 - State one specific, answerable question.
 - Provide a target selector, URL, fragment, or element description.
+- Prefer focused investigations that can be completed with a
+  small number of browser-tool calls.
+- Mark the corresponding finding NEEDS_REVIEW until the
+  investigation evidence has been assessed.
 
-Only request investigations that could materially change a finding's
-status, severity, or recommendation.
+Limit investigation requests to the 5 most important
+unresolved questions.
 
-Do not request investigations for issues already conclusively
-demonstrated by axe-core or Lighthouse.
-
-Do not request investigations simply to reproduce a confirmed issue.
-
-Mark findings requiring investigation as NEEDS_REVIEW.
-
-Limit investigation requests to the 5 most important unresolved questions.
+When no investigation results have yet been supplied,
+explicitly evaluate every finding against these rules
+before returning an empty investigations list.
 
 BROWSER INVESTIGATION RESULTS:
 
@@ -232,6 +256,18 @@ def review_findings(state: AuditState) -> dict:
             "investigation_results": investigation_results
         }))
     ])
+
+    print(
+        f"Reviewer requested {len(response.investigations)} "
+        "investigations."
+    )
+
+    for investigation in response.investigations:
+        print(
+            f"  [{investigation.investigation_type.value}] "
+            f"{investigation.finding_title}"
+        )
+        print(f"    Question: {investigation.question}")
 
     output_dir = Path("runs") / state["run_id"] / "analysis"
     output_dir.mkdir(parents=True, exist_ok=True)
