@@ -41,7 +41,7 @@ def generate_report(state: AuditState) -> dict:
 
     for investigation in state.get("investigation_results", []):
         investigations_by_finding.setdefault(
-            investigation.finding_title,
+            investigation.finding_id,
             [],
         ).append(investigation)
 
@@ -58,6 +58,7 @@ def generate_report(state: AuditState) -> dict:
             lines.extend([
                 "",
                 finding.title,
+                f"Finding ID: {finding.id}",
                 f"Severity: {finding.severity.value.upper()}",
                 f"Status: {finding.status.value.upper()}",
                 f"Description: {finding.description}",
@@ -65,7 +66,7 @@ def generate_report(state: AuditState) -> dict:
                 f"Recommendation: {finding.recommendation}",
             ])
 
-            for investigation in investigations_by_finding.get(finding.title, []):
+            for investigation in investigations_by_finding.get(finding.id, []):
                 if not investigation.screenshots:
                     continue
 
@@ -77,15 +78,15 @@ def generate_report(state: AuditState) -> dict:
     else:
         lines.append("No issues detected by basic checks.")
 
-    finding_titles = {
-        finding.title
+    finding_ids = {
+        finding.id
         for finding in state["findings"]
     }
 
     unmatched = [
         investigation
         for investigation in state.get("investigation_results", [])
-        if investigation.finding_title not in finding_titles
+        if investigation.finding_id not in finding_ids
         and investigation.screenshots
     ]
 

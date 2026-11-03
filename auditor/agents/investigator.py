@@ -295,5 +295,6 @@ async def investigate(
 
         return InvestigationResult(
             **conclusion.model_dump(),
+            finding_id=request.finding_id,
             screenshots=list(screenshots.values()),
         )

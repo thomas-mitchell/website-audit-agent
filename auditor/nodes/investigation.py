@@ -39,6 +39,7 @@ async def investigate_findings(state: AuditState) -> dict:
             print(f"Investigation failed: {exc}")
 
             result = InvestigationResult(
+                finding_id=request.finding_id,
                 finding_title=request.finding_title,
                 question=request.question,
                 answer=(

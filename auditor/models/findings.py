@@ -18,6 +18,16 @@ class VerificationStatus(str, Enum):
 
 
 class Finding(BaseModel):
+    id: str = Field(
+        default="",
+        description="Stable identifier assigned by the application"
+    )
+
+    source_ids: list[str] = Field(
+        default_factory=list,
+        description="IDs of the original findings contributing to this finding"
+    )
+    
     title: str = Field(
         description="Short, descriptive title identifying the specific issue"
     )

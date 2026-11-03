@@ -1,13 +1,14 @@
 import json
 import os
 from pathlib import Path
-
+from uuid import uuid4
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from auditor.models.investigation import ReviewResult
 from auditor.state import AuditState
+from auditor.models.findings import Finding
 
 
 REVIEW_PROMPT = """
@@ -26,6 +27,42 @@ REVIEW RESPONSIBILITIES:
 - Merge duplicates into one finding.
 - Preserve useful evidence, impacts and recommendations from each.
 - Do not merge unrelated issues merely because they affect the same element.
+
+FINDING IDENTIFIERS:
+
+Each supplied finding has an id and source_ids.
+
+- The id identifies a finding within this audit.
+- source_ids identifies the original analyst findings from which
+  a reviewed finding was derived.
+- Treat these identifiers as opaque strings.
+- Never invent or modify an original source ID.
+
+When retaining or refining a finding:
+- Preserve its existing id.
+- Preserve its source_ids.
+
+When merging findings:
+- Preserve one existing id as the merged finding's id.
+- Combine the source_ids from all contributing findings.
+- Remove duplicate source_ids.
+
+When splitting a finding:
+- Preserve the original id for one resulting finding.
+- Additional findings may initially have an empty id.
+- Preserve the relevant source_ids for each resulting finding.
+
+When requesting an investigation:
+- Set finding_id to the id of the reviewed finding.
+- Set finding_title to its current title.
+- Never identify a finding solely by its title.
+
+When incorporating investigation results:
+- Match them using finding_id, not finding_title.
+- Preserve the investigated finding's id even if its title changes.
+- If a finding is split after investigation, preserve its original
+  id on the resulting finding most directly supported by the
+  investigation evidence.
 
 2. EVIDENCE VALIDATION
 - Check whether each finding is supported by the supplied evidence.
@@ -219,6 +256,46 @@ EVIDENCE CONFIDENCE AND REPORTING:
 """
 
 
+def normalise_reviewed_findings(
+    reviewed: list[Finding],
+    originals: list[Finding],
+) -> list[Finding]:
+    """Ensure reviewed findings have unique IDs and valid provenance."""
+
+    original_sources = {
+        source_id
+        for finding in originals
+        for source_id in finding.source_ids
+    }
+
+    existing_ids = {
+        finding.id
+        for finding in originals
+        if finding.id
+    }
+
+    used_ids: set[str] = set()
+
+    for finding in reviewed:
+        # Retain only source IDs that came from actual findings.
+        finding.source_ids = list(dict.fromkeys(
+            source_id
+            for source_id in finding.source_ids
+            if source_id in original_sources
+        ))
+
+        # Generate an ID for new or duplicate findings.
+        if (
+            not finding.id
+            or finding.id in used_ids
+            or finding.id not in existing_ids
+        ):
+            finding.id = uuid4().hex
+
+        used_ids.add(finding.id)
+
+    return reviewed
+
 def review_findings(state: AuditState) -> dict:
     print("Reviewing and consolidating AI findings...")
 
@@ -256,6 +333,22 @@ def review_findings(state: AuditState) -> dict:
             "investigation_results": investigation_results
         }))
     ])
+
+    response.findings = normalise_reviewed_findings(
+        response.findings,
+        state["findings"],
+    )
+
+    valid_finding_ids = {
+        finding.id
+        for finding in response.findings
+    }
+
+    response.investigations = [
+        investigation
+        for investigation in response.investigations
+        if investigation.finding_id in valid_finding_ids
+    ]
 
     print(
         f"Reviewer requested {len(response.investigations)} "

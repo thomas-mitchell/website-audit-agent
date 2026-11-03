@@ -12,6 +12,11 @@ class InvestigationType(str, Enum):
     VISUAL = "visual"
 
 class InvestigationRequest(BaseModel):
+    finding_id: str = Field(
+        default="",
+        description="ID of the reviewed finding requiring investigation"
+    )
+
     finding_title: str = Field(
         description="Title of the finding requiring investigation"
     )
@@ -51,6 +56,11 @@ class ScreenshotEvidence(BaseModel):
     analysis_answer: str | None = None
 
 class InvestigationResult(BaseModel):
+    finding_id: str = Field(
+        default="",
+        description="ID of the reviewed finding being investigated"
+    )
+
     finding_title: str = Field(
         description="Title of the finding being investigated"
     )
