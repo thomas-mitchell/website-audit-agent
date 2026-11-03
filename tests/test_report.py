@@ -1,5 +1,6 @@
 import json
 import asyncio
+import base64
 from pathlib import Path
 
 from auditor.models.findings import Finding, Severity, VerificationStatus
@@ -31,7 +32,14 @@ def test_report_saves_markdown_with_screenshot(tmp_path, monkeypatch):
         / "logo.png"
     )
     screenshot_path.parent.mkdir(parents=True)
-    screenshot_path.write_bytes(b"test screenshot")
+
+    # A valid 1×1 PNG for testing.
+    png_data = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC"
+        "AAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII="
+    )
+
+    screenshot_path.write_bytes(png_data)
 
     finding = Finding(
         id="finding-123",

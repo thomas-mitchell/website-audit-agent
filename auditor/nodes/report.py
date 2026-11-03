@@ -1,11 +1,9 @@
 import json
 import os
 import re
-from html import escape
 from collections import Counter
-from pathlib import Path
-import re
 from html import escape
+from pathlib import Path
 
 from auditor.models.findings import Severity
 from auditor.state import AuditState
@@ -74,7 +72,7 @@ def format_screenshot_evidence(investigation, report_dir: Path) -> list[str]:
                 "",
                 "**Visual observations:**",
                 "",
-                escape_html_in_markdown(screenshot.analysis_answer),
+                *format_analysis_answer(screenshot.analysis_answer),
             ])
 
     return lines
@@ -189,7 +187,9 @@ def render_markdown_report(
             ])
 
             for reference in finding.references:
-                lines.append(f"- {reference}")
+                lines.append(
+                    f"- {escape_html_in_markdown(reference)}"
+                )
 
         for investigation in investigations_by_finding.get(
             finding.id, []

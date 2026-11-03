@@ -37,6 +37,7 @@ Add an accessible name to the logo link.
 <a href="/" aria-label="Company homepage">
     <img src="logo.png" alt="">
 </a>
+```
 """,
         encoding="utf-8",
     )
