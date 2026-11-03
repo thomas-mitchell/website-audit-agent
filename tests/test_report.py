@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from auditor.models.findings import Finding, Severity, VerificationStatus
 from auditor.models.investigation import (
@@ -8,7 +9,9 @@ from auditor.models.investigation import (
 from auditor.nodes.report import generate_report
 
 
-def test_report_includes_screenshot_references(tmp_path):
+def test_report_saves_markdown_with_screenshot(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
     page_path = tmp_path / "page.json"
     page_path.write_text(
         json.dumps({
@@ -18,24 +21,38 @@ def test_report_includes_screenshot_references(tmp_path):
         encoding="utf-8",
     )
 
+    screenshot_path = (
+        tmp_path
+        / "runs"
+        / "test-run"
+        / "evidence"
+        / "screenshots"
+        / "logo.png"
+    )
+    screenshot_path.parent.mkdir(parents=True)
+    screenshot_path.write_bytes(b"test screenshot")
+
     finding = Finding(
-        title="Logo missing alternative text",
+        id="finding-123",
+        source_ids=["finding-123"],
+        title="Site logo missing alt text",
         severity=Severity.MEDIUM,
         status=VerificationStatus.CONFIRMED,
         description="The logo image has an empty alt attribute.",
         impact="Screen reader users may miss the brand identity.",
-        recommendation="Add descriptive alternative text.",
+        recommendation="Give the logo link an accessible name.",
     )
 
     investigation = InvestigationResult(
-        finding_title=finding.title,
+        finding_id="finding-123",
+        finding_title="Images may lack alt text",
         question="What does the logo depict?",
         answer="The image contains the company logo.",
-        evidence=["The image was visually inspected."],
+        evidence=["Visual inspection identified a logo."],
         resolved=True,
         screenshots=[
             ScreenshotEvidence(
-                path="runs/test/evidence/screenshots/logo.png",
+                path=str(screenshot_path),
                 capture_type="element",
                 selector="img.logo",
                 analysed=True,
@@ -47,16 +64,35 @@ def test_report_includes_screenshot_references(tmp_path):
 
     state = {
         "url": "https://example.com",
+        "run_id": "test-run",
         "evidence_files": {"page": str(page_path)},
         "findings": [finding],
         "investigation_results": [investigation],
     }
 
     result = generate_report(state)
-    report = result["report"]
 
-    assert "Visual Evidence:" in report
-    assert "runs/test/evidence/screenshots/logo.png" in report
-    assert "Capture type: element" in report
-    assert "Visually analysed: Yes" in report
-    assert "The image contains the company logo." in report
+    report_path = (
+        tmp_path / "runs" / "test-run" / "reports" / "audit.md"
+    )
+
+    assert report_path.exists()
+
+    markdown = report_path.read_text(encoding="utf-8")
+
+    assert result["report"] == markdown
+    assert "# Website Quality Audit" in markdown
+    assert "## Executive Summary" in markdown
+    assert "| Medium | 1 |" in markdown
+    assert "### 1. Site logo missing alt text" in markdown
+    assert "#### Investigation" in markdown
+    assert "The image contains the company logo." in markdown
+
+    # Screenshot is linked using a path relative to audit.md.
+    assert (
+        "![Investigation screenshot]"
+        "(../evidence/screenshots/logo.png)"
+    ) in markdown
+
+    # The investigation is associated by ID despite its old title.
+    assert "## Additional Investigation Evidence" not in markdown

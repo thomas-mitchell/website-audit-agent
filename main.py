@@ -1,5 +1,6 @@
 import asyncio
 from uuid import uuid4
+from pathlib import Path
 
 from auditor.graph import build_graph
 
@@ -19,8 +20,15 @@ async def main():
         "report": ""
     })
 
+    report_path = (
+        Path("runs")
+        / result["run_id"]
+        / "reports"
+        / "audit.md"
+    )
+
     print()
-    print(result["report"])
+    print(f"Report saved to: {report_path.resolve()}")
 
     print()
     print("Analysis files:")

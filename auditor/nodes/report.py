@@ -1,40 +1,75 @@
 import json
+import os
+from collections import Counter
 from pathlib import Path
 
+from auditor.models.findings import Severity
 from auditor.state import AuditState
 
 
-def format_screenshot_evidence(investigation) -> list[str]:
-    """Format screenshot references for a text report."""
+SEVERITY_ORDER = [
+    Severity.CRITICAL,
+    Severity.HIGH,
+    Severity.MEDIUM,
+    Severity.LOW,
+    Severity.INFO,
+]
+
+
+def format_screenshot_evidence(investigation, report_dir: Path) -> list[str]:
+    """Format investigation screenshots as Markdown."""
 
     lines = []
 
     for screenshot in investigation.screenshots:
-        lines.append(f"  Screenshot: {screenshot.path}")
-        lines.append(f"    Capture type: {screenshot.capture_type}")
+        screenshot_path = Path(screenshot.path).resolve()
+
+        # Markdown image paths must be relative to the report directory.
+        relative_path = Path(
+            os.path.relpath(screenshot_path, report_dir.resolve())
+        ).as_posix()
+
+        lines.extend([
+            "",
+            f"**Screenshot type:** {screenshot.capture_type}",
+            "",
+            f"![Investigation screenshot]({relative_path})",
+            "",
+        ])
 
         if screenshot.selector:
-            lines.append(f"    Selector: {screenshot.selector}")
+            lines.append(
+                f"**Element selector:** `{screenshot.selector}`"
+            )
+            lines.append("")
 
         lines.append(
-            f"    Visually analysed: {'Yes' if screenshot.analysed else 'No'}"
+            f"**Visually analysed:** "
+            f"{'Yes' if screenshot.analysed else 'No'}"
         )
 
         if screenshot.analysed and screenshot.analysis_answer:
-            lines.append(
-                f"    Visual observations: {screenshot.analysis_answer}"
-            )
+            lines.extend([
+                "",
+                "**Visual observations:**",
+                "",
+                screenshot.analysis_answer,
+            ])
 
     return lines
 
 
-def generate_report(state: AuditState) -> dict:
-    print("Generating report...")
+def render_markdown_report(
+    state: AuditState,
+    page_data: dict,
+    report_dir: Path,
+) -> str:
+    """Render a Markdown report from structured audit results."""
 
-    page_path = Path(state["evidence_files"]["page"])
+    findings = state["findings"]
 
-    page_data = json.loads(
-        page_path.read_text(encoding="utf-8")
+    severity_counts = Counter(
+        finding.severity for finding in findings
     )
 
     investigations_by_finding = {}
@@ -46,41 +81,127 @@ def generate_report(state: AuditState) -> dict:
         ).append(investigation)
 
     lines = [
-        f"Website Audit: {page_data['title']}",
-        f"URL: {state['url']}",
-        f"HTTP Status: {page_data['status_code']}",
+        "# Website Quality Audit",
         "",
-        "Findings:"
+        f"**Website:** {page_data['title']}",
+        "",
+        f"**URL:** {state['url']}",
+        "",
+        f"**HTTP Status:** {page_data['status_code']}",
+        "",
+        "## Executive Summary",
+        "",
+        f"**Total findings:** {len(findings)}",
+        "",
+        "| Severity | Findings |",
+        "| --- | ---: |",
     ]
 
-    if state["findings"]:
-        for finding in state["findings"]:
+    for severity in SEVERITY_ORDER:
+        lines.append(
+            f"| {severity.value.title()} | "
+            f"{severity_counts[severity]} |"
+        )
+
+    lines.extend([
+        "",
+        "## Findings",
+    ])
+
+    if not findings:
+        lines.extend([
+            "",
+            "No findings were reported by the audit.",
+        ])
+
+    for index, finding in enumerate(findings, start=1):
+        lines.extend([
+            "",
+            f"### {index}. {finding.title}",
+            "",
+            f"**Finding ID:** `{finding.id}`",
+            "",
+            f"**Severity:** {finding.severity.value.upper()}",
+            "",
+            f"**Status:** {finding.status.value.upper()}",
+            "",
+            "#### Description",
+            "",
+            finding.description,
+            "",
+            "#### Impact",
+            "",
+            finding.impact,
+            "",
+            "#### Recommendation",
+            "",
+            finding.recommendation,
+        ])
+
+        if finding.evidence:
             lines.extend([
                 "",
-                finding.title,
-                f"Finding ID: {finding.id}",
-                f"Severity: {finding.severity.value.upper()}",
-                f"Status: {finding.status.value.upper()}",
-                f"Description: {finding.description}",
-                f"Impact: {finding.impact}",
-                f"Recommendation: {finding.recommendation}",
+                "#### Supporting Evidence",
+                "",
             ])
 
-            for investigation in investigations_by_finding.get(finding.id, []):
-                if not investigation.screenshots:
-                    continue
+            for evidence in finding.evidence:
+                lines.append(f"- {evidence}")
 
-                lines.append("")
-                lines.append("Visual Evidence:")
+        if finding.reproduction_steps:
+            lines.extend([
+                "",
+                "#### Reproduction Steps",
+                "",
+            ])
 
-                lines.extend(format_screenshot_evidence(investigation))
+            for step_index, step in enumerate(
+                finding.reproduction_steps, start=1
+            ):
+                lines.append(f"{step_index}. {step}")
 
-    else:
-        lines.append("No issues detected by basic checks.")
+        if finding.references:
+            lines.extend([
+                "",
+                "#### References",
+                "",
+            ])
 
+            for reference in finding.references:
+                lines.append(f"- {reference}")
+
+        for investigation in investigations_by_finding.get(
+            finding.id, []
+        ):
+            lines.extend([
+                "",
+                "#### Investigation",
+                "",
+                f"**Question:** {investigation.question}",
+                "",
+                f"**Result:** {investigation.answer}",
+                "",
+                f"**Resolved:** "
+                f"{'Yes' if investigation.resolved else 'No'}",
+            ])
+
+            if investigation.screenshots:
+                lines.extend([
+                    "",
+                    "##### Visual Evidence",
+                ])
+
+                lines.extend(
+                    format_screenshot_evidence(
+                        investigation,
+                        report_dir,
+                    )
+                )
+
+    # Preserve evidence from investigations whose findings were
+    # removed or whose IDs changed during the final review.
     finding_ids = {
-        finding.id
-        for finding in state["findings"]
+        finding.id for finding in findings
     }
 
     unmatched = [
@@ -93,17 +214,56 @@ def generate_report(state: AuditState) -> dict:
     if unmatched:
         lines.extend([
             "",
-            "Additional Investigation Evidence:",
+            "## Additional Investigation Evidence",
         ])
 
         for investigation in unmatched:
             lines.extend([
                 "",
-                f"Original finding: {investigation.finding_title}",
+                f"### {investigation.finding_title}",
+                "",
+                investigation.answer,
             ])
 
-            lines.extend(format_screenshot_evidence(investigation))
+            lines.extend(
+                format_screenshot_evidence(
+                    investigation,
+                    report_dir,
+                )
+            )
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def generate_report(state: AuditState) -> dict:
+    """Generate and save the Markdown audit report."""
+
+    print("Generating Markdown report...")
+
+    page_path = Path(state["evidence_files"]["page"])
+
+    page_data = json.loads(
+        page_path.read_text(encoding="utf-8")
+    )
+
+    report_dir = Path("runs") / state["run_id"] / "reports"
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    markdown = render_markdown_report(
+        state,
+        page_data,
+        report_dir,
+    )
+
+    report_path = report_dir / "audit.md"
+
+    report_path.write_text(
+        markdown,
+        encoding="utf-8",
+    )
+
+    print(f"Markdown report saved: {report_path}")
 
     return {
-        "report": "\n".join(lines)
+        "report": markdown,
     }
