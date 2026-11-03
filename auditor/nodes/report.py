@@ -5,6 +5,7 @@ from pathlib import Path
 
 from auditor.models.findings import Severity
 from auditor.state import AuditState
+from auditor.reporting.pdf import generate_pdf
 
 
 SEVERITY_ORDER = [
@@ -235,7 +236,7 @@ def render_markdown_report(
     return "\n".join(lines).rstrip() + "\n"
 
 
-def generate_report(state: AuditState) -> dict:
+async def generate_report(state: AuditState) -> dict:
     """Generate and save the Markdown audit report."""
 
     print("Generating Markdown report...")
@@ -263,6 +264,13 @@ def generate_report(state: AuditState) -> dict:
     )
 
     print(f"Markdown report saved: {report_path}")
+
+    pdf_path = report_dir / "audit.pdf"
+
+    await generate_pdf(
+        markdown_path=report_path,
+        output_path=pdf_path,
+    )
 
     return {
         "report": markdown,

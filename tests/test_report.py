@@ -1,4 +1,5 @@
 import json
+import asyncio
 from pathlib import Path
 
 from auditor.models.findings import Finding, Severity, VerificationStatus
@@ -70,7 +71,7 @@ def test_report_saves_markdown_with_screenshot(tmp_path, monkeypatch):
         "investigation_results": [investigation],
     }
 
-    result = generate_report(state)
+    result = asyncio.run(generate_report(state))
 
     report_path = (
         tmp_path / "runs" / "test-run" / "reports" / "audit.md"

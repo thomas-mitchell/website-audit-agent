@@ -20,15 +20,16 @@ async def main():
         "report": ""
     })
 
-    report_path = (
+    report_dir = (
         Path("runs")
         / result["run_id"]
         / "reports"
-        / "audit.md"
     )
 
     print()
-    print(f"Report saved to: {report_path.resolve()}")
+    print(f"Markdown: {(report_dir / 'audit.md').resolve()}")
+    print(f"HTML:     {(report_dir / 'audit.html').resolve()}")
+    print(f"PDF:      {(report_dir / 'audit.pdf').resolve()}")
 
     print()
     print("Analysis files:")
