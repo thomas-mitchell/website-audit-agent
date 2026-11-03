@@ -11,6 +11,13 @@ async def investigate_findings(state: AuditState) -> dict:
 
     requests = state.get("investigations", [])
 
+    screenshot_dir = (
+        Path("runs")
+        / state["run_id"]
+        / "evidence"
+        / "screenshots"
+    )
+
     print(f"Investigating {len(requests)} findings...")
 
     results: list[InvestigationResult] = []
@@ -25,6 +32,7 @@ async def investigate_findings(state: AuditState) -> dict:
             result = await investigate(
                 url=state["url"],
                 request=request,
+                output_dir=screenshot_dir,
             )
 
         except Exception as exc:

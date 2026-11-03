@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
@@ -158,6 +159,7 @@ MAX_MODEL_CALLS = 12
 async def investigate(
     url: str,
     request: InvestigationRequest,
+    output_dir: Path | None = None,
 ) -> InvestigationResult:
 
     load_dotenv()
@@ -176,7 +178,10 @@ async def investigate(
         ),
     ]
 
-    async with BrowserSession(url) as session:
+    async with BrowserSession(
+        url,
+        output_dir=output_dir,
+    ) as session:
         tools = create_browser_tools(session)
         tools_by_name = {tool.name: tool for tool in tools}
 

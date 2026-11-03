@@ -1,5 +1,6 @@
 import asyncio
 import json
+from pathlib import Path
 
 from auditor.agents.investigator import investigate
 from auditor.models.investigation import (
@@ -27,6 +28,12 @@ async def main():
     result = await investigate(
         url="https://www.boomworks.com.au/",
         request=request,
+        output_dir=(
+            Path("runs")
+            / "visual-investigator-test"
+            / "evidence"
+            / "screenshots"
+        ),
     )
 
     print(json.dumps(
